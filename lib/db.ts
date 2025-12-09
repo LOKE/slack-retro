@@ -3,6 +3,7 @@ import { neon } from "@neondatabase/serverless";
 // Use a placeholder during build time, will be validated at runtime
 const DATABASE_URL = process.env.DATABASE_URL || "postgresql://user:password@localhost/dbname";
 
+// Create Neon client
 export const sql = neon(DATABASE_URL);
 
 function validateDatabaseUrl() {
