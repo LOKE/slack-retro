@@ -60,7 +60,13 @@ export async function POST(request: NextRequest) {
     // Slack expects a response within 3 seconds, but view publishing is usually fast
     await processSlackEvent(payload);
 
-    // Acknowledge
+    // Return appropriate response based on payload type
+    // view_submission requires empty response or response_action to close modal
+    if (payload.type === "view_submission") {
+      return new NextResponse(null, { status: 200 });
+    }
+
+    // All other events (event_callback, block_actions, etc.)
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Error processing Slack event:", error);
