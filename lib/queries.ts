@@ -119,12 +119,23 @@ export async function getPastRetros(teamId: string): Promise<Retrospective[]> {
 export async function getDiscussionItems(
   retroId: string
 ): Promise<DiscussionItem[]> {
-  const result = await sql`
-    SELECT * FROM discussion_items
-    WHERE retro_id = ${retroId}
-    ORDER BY category, created_at ASC
-  `;
-  return result as DiscussionItem[];
+  try {
+    console.log(`[getDiscussionItems] Querying for retro ${retroId}`);
+    const result = await sql`
+      SELECT * FROM discussion_items
+      WHERE retro_id = ${retroId}
+      ORDER BY category, created_at ASC
+    `;
+    console.log(`[getDiscussionItems] Query returned ${result.length} items`);
+    return result as DiscussionItem[];
+  } catch (error) {
+    console.error(`[getDiscussionItems] Database query error:`, error);
+    if (error instanceof Error) {
+      console.error(`[getDiscussionItems] Error name: ${error.name}`);
+      console.error(`[getDiscussionItems] Error message: ${error.message}`);
+    }
+    throw error;
+  }
 }
 
 export async function createDiscussionItem(
@@ -176,12 +187,23 @@ export async function deleteAllDiscussionItems(retroId: string): Promise<void> {
 
 // Action item queries
 export async function getActionItems(retroId: string): Promise<ActionItem[]> {
-  const result = await sql`
-    SELECT * FROM action_items
-    WHERE retro_id = ${retroId} AND completed = false
-    ORDER BY created_at ASC
-  `;
-  return result as ActionItem[];
+  try {
+    console.log(`[getActionItems] Querying for retro ${retroId}`);
+    const result = await sql`
+      SELECT * FROM action_items
+      WHERE retro_id = ${retroId} AND completed = false
+      ORDER BY created_at ASC
+    `;
+    console.log(`[getActionItems] Query returned ${result.length} items`);
+    return result as ActionItem[];
+  } catch (error) {
+    console.error(`[getActionItems] Database query error:`, error);
+    if (error instanceof Error) {
+      console.error(`[getActionItems] Error name: ${error.name}`);
+      console.error(`[getActionItems] Error message: ${error.message}`);
+    }
+    throw error;
+  }
 }
 
 export async function getAllActionItems(retroId: string): Promise<ActionItem[]> {
