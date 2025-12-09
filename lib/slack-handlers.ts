@@ -191,7 +191,7 @@ export async function processSlackEvent(payload: any) {
         if (content && category) {
           const retro = await getOrCreateActiveRetro(teamId);
           await createDiscussionItem(retro.id, userId, userName, category, content);
-          await refreshHomeView(userId, teamId);
+          // Home view will refresh automatically when user returns to home tab
         }
       }
 
@@ -202,7 +202,7 @@ export async function processSlackEvent(payload: any) {
 
         if (content && itemId) {
           await updateDiscussionItem(itemId, userId, content);
-          await refreshHomeView(userId, teamId);
+          // Home view will refresh automatically when user returns to home tab
         }
       }
 
@@ -227,7 +227,7 @@ export async function processSlackEvent(payload: any) {
             content
           );
 
-          await refreshHomeView(userId, teamId);
+          // Home view will refresh automatically when user returns to home tab
         }
       }
     }
