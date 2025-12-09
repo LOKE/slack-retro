@@ -40,10 +40,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ challenge: payload.challenge });
     }
 
-    // Process the event asynchronously
-    setImmediate(() => processSlackEvent(payload));
+    // Process the event synchronously to avoid serverless function termination
+    // Slack expects a response within 3 seconds, but view publishing is usually fast
+    await processSlackEvent(payload);
 
-    // Acknowledge immediately
+    // Acknowledge
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Error processing Slack event:", error);
