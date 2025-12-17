@@ -264,3 +264,26 @@ export async function migrateIncompleteActionItems(
     WHERE retro_id = ${fromRetroId} AND completed = false
   `;
 }
+
+// Team settings queries
+export async function getTeamInstructions(
+  teamId: string
+): Promise<string | null> {
+  const result = await sql`
+    SELECT retro_instructions FROM team_settings
+    WHERE team_id = ${teamId}
+  `;
+  return result[0]?.retro_instructions || null;
+}
+
+export async function saveTeamInstructions(
+  teamId: string,
+  instructions: string
+): Promise<void> {
+  await sql`
+    INSERT INTO team_settings (team_id, retro_instructions, updated_at)
+    VALUES (${teamId}, ${instructions}, NOW())
+    ON CONFLICT (team_id)
+    DO UPDATE SET retro_instructions = ${instructions}, updated_at = NOW()
+  `;
+}
