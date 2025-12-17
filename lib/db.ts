@@ -68,6 +68,16 @@ export async function initDatabase() {
     )
   `;
 
+  // Create team_settings table
+  await sql`
+    CREATE TABLE IF NOT EXISTS team_settings (
+      team_id TEXT PRIMARY KEY,
+      retro_instructions TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+
   // Create indexes for better query performance
   await sql`CREATE INDEX IF NOT EXISTS idx_retrospectives_team_id ON retrospectives(team_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_retrospectives_status ON retrospectives(status)`;

@@ -34,6 +34,29 @@ export function buildHomeView(
       },
     },
     {
+      type: "actions",
+      elements: [
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: "📝 Edit Instructions",
+            emoji: true,
+          },
+          action_id: "edit_instructions",
+        },
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: "👁️ View Instructions",
+            emoji: true,
+          },
+          action_id: "view_instructions",
+        },
+      ],
+    },
+    {
       type: "section",
       text: {
         type: "mrkdwn",
@@ -539,4 +562,83 @@ export function generateRetroSummary(
   }
 
   return summary;
+}
+
+export function buildEditInstructionsModal(currentInstructions?: string) {
+  return {
+    type: "modal" as const,
+    callback_id: "edit_instructions_modal",
+    title: {
+      type: "plain_text",
+      text: "Edit Retro Instructions",
+    },
+    submit: {
+      type: "plain_text",
+      text: "Save",
+    },
+    close: {
+      type: "plain_text",
+      text: "Cancel",
+    },
+    blocks: [
+      {
+        type: "input",
+        block_id: "instructions_block",
+        element: {
+          type: "plain_text_input",
+          action_id: "instructions_input",
+          multiline: true,
+          initial_value: currentInstructions || "",
+          placeholder: {
+            type: "plain_text",
+            text: "Enter instructions in markdown format...",
+          },
+        },
+        label: {
+          type: "plain_text",
+          text: "Instructions (Markdown)",
+        },
+        hint: {
+          type: "plain_text",
+          text: "Use markdown formatting. These instructions will be displayed to your team.",
+        },
+      },
+    ],
+  };
+}
+
+export function buildViewInstructionsModal(instructions?: string) {
+  const blocks: any[] = [];
+
+  if (!instructions || instructions.trim() === "") {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: "_No instructions have been set yet. Click 'Edit Instructions' to add some._",
+      },
+    });
+  } else {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: instructions,
+      },
+    });
+  }
+
+  return {
+    type: "modal" as const,
+    callback_id: "view_instructions_modal",
+    title: {
+      type: "plain_text",
+      text: "Retro Instructions",
+    },
+    close: {
+      type: "plain_text",
+      text: "Close",
+    },
+    blocks,
+  };
 }

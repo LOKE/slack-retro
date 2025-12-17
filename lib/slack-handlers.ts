@@ -15,6 +15,8 @@ import {
   getAllActionItems,
   createRetro,
   migrateIncompleteActionItems,
+  getTeamInstructions,
+  saveTeamInstructions,
 } from "./queries";
 import {
   buildHomeView,
@@ -23,6 +25,8 @@ import {
   buildAddActionItemModal,
   buildPastRetrosModal,
   generateRetroSummary,
+  buildEditInstructionsModal,
+  buildViewInstructionsModal,
 } from "./slack-ui";
 
 function getClient() {
@@ -149,6 +153,24 @@ export async function processSlackEvent(payload: any) {
         });
       }
 
+      // Handle "Edit Instructions" button
+      else if (action.action_id === "edit_instructions") {
+        const instructions = await getTeamInstructions(teamId);
+        await getSlackClient().views.open({
+          trigger_id: payload.trigger_id,
+          view: buildEditInstructionsModal(instructions || undefined) as any,
+        });
+      }
+
+      // Handle "View Instructions" button
+      else if (action.action_id === "view_instructions") {
+        const instructions = await getTeamInstructions(teamId);
+        await getSlackClient().views.open({
+          trigger_id: payload.trigger_id,
+          view: buildViewInstructionsModal(instructions || undefined) as any,
+        });
+      }
+
       // Handle "Finish Retro" button
       else if (action.action_id === "finish_retro") {
         const retro = await getOrCreateActiveRetro(teamId);
@@ -263,6 +285,16 @@ export async function processSlackEvent(payload: any) {
             content
           );
 
+          await refreshHomeView(userId, teamId);
+        }
+      }
+
+      // Handle edit instructions modal submission
+      else if (view.callback_id === "edit_instructions_modal") {
+        const instructions = view.state.values.instructions_block.instructions_input.value;
+
+        if (instructions !== null && instructions !== undefined) {
+          await saveTeamInstructions(teamId, instructions);
           await refreshHomeView(userId, teamId);
         }
       }
