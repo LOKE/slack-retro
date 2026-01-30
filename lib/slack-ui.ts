@@ -16,17 +16,28 @@ const CATEGORY_LABELS = {
 /**
  * Converts standard markdown to Slack's mrkdwn format
  * Slack doesn't support # headers, so we convert them to bold text
+ * Slack uses <url|text> format for links instead of [text](url)
  */
 function convertMarkdownToSlackFormat(text: string): string {
   let result = text;
 
-  // Convert markdown headers to bold text with newlines
+  // Convert markdown links [text](url) to Slack format <url|text>
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<$2|$1>");
+
+  // Convert markdown headers to bold text with proper spacing
   // ### Header 3 -> *Header 3*
-  result = result.replace(/^### (.+)$/gm, "*$1*");
-  // ## Header 2 -> *Header 2* (with more emphasis)
-  result = result.replace(/^## (.+)$/gm, "*$1*\n");
-  // # Header 1 -> *Header 1* (with more emphasis)
-  result = result.replace(/^# (.+)$/gm, "*$1*\n");
+  result = result.replace(/^### (.+)$/gm, "\n*$1*\n");
+  // ## Header 2 -> *Header 2*
+  result = result.replace(/^## (.+)$/gm, "\n*$1*\n");
+  // # Header 1 -> *Header 1*
+  result = result.replace(/^# (.+)$/gm, "\n*$1*\n");
+
+  // Ensure lists have proper spacing (blank line before list starts)
+  // This helps Slack render them correctly
+  result = result.replace(/([^\n])\n([-*•] )/g, "$1\n\n$2");
+
+  // Clean up any triple+ newlines to double newlines
+  result = result.replace(/\n{3,}/g, "\n\n");
 
   return result;
 }
