@@ -14,21 +14,171 @@ const CATEGORY_LABELS = {
 } as const;
 
 /**
- * Converts standard markdown to Slack's mrkdwn format
- * Slack doesn't support # headers, so we convert them to bold text
+ * Parses markdown text and converts it to Slack rich_text blocks
+ * This handles headers, paragraphs, lists, and links properly
+ * Slack's mrkdwn in section blocks has a bug with lists, so we use rich_text instead
  */
-function convertMarkdownToSlackFormat(text: string): string {
-  let result = text;
+function parseMarkdownToRichTextBlocks(text: string): any[] {
+  const blocks: any[] = [];
+  const lines = text.split("\n");
+  let i = 0;
 
-  // Convert markdown headers to bold text with newlines
-  // ### Header 3 -> *Header 3*
-  result = result.replace(/^### (.+)$/gm, "*$1*");
-  // ## Header 2 -> *Header 2* (with more emphasis)
-  result = result.replace(/^## (.+)$/gm, "*$1*\n");
-  // # Header 1 -> *Header 1* (with more emphasis)
-  result = result.replace(/^# (.+)$/gm, "*$1*\n");
+  while (i < lines.length) {
+    const line = lines[i];
 
-  return result;
+    // Skip empty lines
+    if (!line.trim()) {
+      i++;
+      continue;
+    }
+
+    // Handle headers
+    if (line.match(/^#{1,3} /)) {
+      const headerMatch = line.match(/^(#{1,3}) (.+)$/);
+      if (headerMatch) {
+        const headerText = headerMatch[2];
+        blocks.push({
+          type: "rich_text",
+          elements: [
+            {
+              type: "rich_text_section",
+              elements: [
+                {
+                  type: "text",
+                  text: headerText,
+                  style: { bold: true },
+                },
+              ],
+            },
+          ],
+        });
+        i++;
+        continue;
+      }
+    }
+
+    // Handle lists (bullet points with -, *, or •)
+    if (line.match(/^[-*•] /)) {
+      const listItems: any[] = [];
+
+      // Collect all consecutive list items
+      while (i < lines.length && lines[i].match(/^[-*•] /)) {
+        const itemText = lines[i].replace(/^[-*•] /, "");
+        listItems.push({
+          type: "rich_text_section",
+          elements: parseInlineMarkdown(itemText),
+        });
+        i++;
+      }
+
+      blocks.push({
+        type: "rich_text",
+        elements: [
+          {
+            type: "rich_text_list",
+            style: "bullet",
+            elements: listItems,
+          },
+        ],
+      });
+      continue;
+    }
+
+    // Handle regular paragraphs
+    let paragraphText = line;
+    i++;
+
+    // Collect multi-line paragraphs
+    while (i < lines.length && lines[i].trim() && !lines[i].match(/^(#{1,3} |[-*•] )/)) {
+      paragraphText += "\n" + lines[i];
+      i++;
+    }
+
+    blocks.push({
+      type: "rich_text",
+      elements: [
+        {
+          type: "rich_text_section",
+          elements: parseInlineMarkdown(paragraphText),
+        },
+      ],
+    });
+  }
+
+  return blocks;
+}
+
+/**
+ * Parses inline markdown (bold, italic, links) within text
+ */
+function parseInlineMarkdown(text: string): any[] {
+  const elements: any[] = [];
+  let remainingText = text;
+
+  // Pattern to match markdown links [text](url), bold **text**, italic *text* or _text_
+  const pattern = /(\[([^\]]+)\]\(([^)]+)\))|(\*\*([^*]+)\*\*)|(\*([^*]+)\*)|(_([^_]+)_)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = pattern.exec(remainingText)) !== null) {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      const beforeText = remainingText.substring(lastIndex, match.index);
+      if (beforeText) {
+        elements.push({ type: "text", text: beforeText });
+      }
+    }
+
+    // Handle link [text](url)
+    if (match[1]) {
+      elements.push({
+        type: "link",
+        url: match[3],
+        text: match[2],
+      });
+    }
+    // Handle bold **text**
+    else if (match[4]) {
+      elements.push({
+        type: "text",
+        text: match[5],
+        style: { bold: true },
+      });
+    }
+    // Handle italic *text*
+    else if (match[6]) {
+      elements.push({
+        type: "text",
+        text: match[7],
+        style: { italic: true },
+      });
+    }
+    // Handle italic _text_
+    else if (match[8]) {
+      elements.push({
+        type: "text",
+        text: match[9],
+        style: { italic: true },
+      });
+    }
+
+    lastIndex = pattern.lastIndex;
+  }
+
+  // Add remaining text
+  if (lastIndex < remainingText.length) {
+    const afterText = remainingText.substring(lastIndex);
+    if (afterText) {
+      elements.push({ type: "text", text: afterText });
+    }
+  }
+
+  // If no markdown was found, just return plain text
+  if (elements.length === 0) {
+    elements.push({ type: "text", text: remainingText });
+  }
+
+  return elements;
 }
 
 export function buildHomeView(
@@ -626,57 +776,27 @@ export function buildEditInstructionsModal(currentInstructions?: string) {
 }
 
 export function buildViewInstructionsModal(instructions?: string) {
-  const blocks: any[] = [];
+  let blocks: any[] = [];
 
   if (!instructions || instructions.trim() === "") {
     blocks.push({
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: "_No instructions have been set yet. Click 'Edit Instructions' to add some._",
-      },
+      type: "rich_text",
+      elements: [
+        {
+          type: "rich_text_section",
+          elements: [
+            {
+              type: "text",
+              text: "No instructions have been set yet. Click 'Edit Instructions' to add some.",
+              style: { italic: true },
+            },
+          ],
+        },
+      ],
     });
   } else {
-    // Convert standard markdown to Slack's mrkdwn format
-    const slackFormattedText = convertMarkdownToSlackFormat(instructions);
-
-    // Split content into chunks to avoid 3000 character limit per block
-    // Also helps with better markdown rendering
-    const maxChunkSize = 2800; // Leave some buffer
-    const lines = slackFormattedText.split("\n");
-    let currentChunk = "";
-
-    for (const line of lines) {
-      const potentialChunk = currentChunk + (currentChunk ? "\n" : "") + line;
-
-      if (potentialChunk.length > maxChunkSize) {
-        // Add current chunk as a block
-        if (currentChunk) {
-          blocks.push({
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: currentChunk,
-            },
-          });
-        }
-        // Start new chunk with current line
-        currentChunk = line;
-      } else {
-        currentChunk = potentialChunk;
-      }
-    }
-
-    // Add remaining chunk
-    if (currentChunk) {
-      blocks.push({
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: currentChunk,
-        },
-      });
-    }
+    // Parse markdown and convert to rich text blocks
+    blocks = parseMarkdownToRichTextBlocks(instructions);
   }
 
   return {
