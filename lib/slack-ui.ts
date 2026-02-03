@@ -208,6 +208,16 @@ export function buildHomeView(
           type: "button",
           text: {
             type: "plain_text",
+            text: "🌐 Open in Browser",
+            emoji: true,
+          },
+          action_id: "open_in_browser",
+          style: "primary",
+        },
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
             text: "📝 Edit Instructions",
             emoji: true,
           },

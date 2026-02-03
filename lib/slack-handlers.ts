@@ -28,6 +28,7 @@ import {
   buildEditInstructionsModal,
   buildViewInstructionsModal,
 } from "./slack-ui";
+import { generateAuthToken } from "./auth";
 
 function getClient() {
   if (!process.env.SLACK_BOT_TOKEN) {
@@ -123,8 +124,54 @@ export async function processSlackEvent(payload: any) {
       const userId = payload.user.id;
       const teamId = payload.team?.id || payload.user.team_id;
 
+      // Handle "Open in Browser" button
+      if (action.action_id === "open_in_browser") {
+        const userName = payload.user.name || payload.user.username || "Unknown";
+
+        // Generate signed token
+        const token = generateAuthToken(userId, userName, teamId);
+
+        // Build URL - use VERCEL_URL in production, localhost in dev
+        const baseUrl = process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : process.env.BASE_URL || "http://localhost:3000";
+        const authUrl = `${baseUrl}/api/auth/browser?token=${token}`;
+
+        // Send ephemeral message with the link
+        await getSlackClient().chat.postEphemeral({
+          channel: userId,
+          user: userId,
+          text: `Click here to open the retro in your browser: ${authUrl}`,
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `🌐 *Open Retro in Browser*\n\nClick the button below to open the retro board in your browser. This link will expire in 5 minutes.`,
+              },
+            },
+            {
+              type: "actions",
+              elements: [
+                {
+                  type: "button",
+                  text: {
+                    type: "plain_text",
+                    text: "Open Browser View",
+                    emoji: true,
+                  },
+                  url: authUrl,
+                  action_id: "open_browser_link",
+                  style: "primary",
+                },
+              ],
+            },
+          ],
+        });
+      }
+
       // Handle "Add Discussion Item" button
-      if (action.action_id === "add_discussion_item") {
+      else if (action.action_id === "add_discussion_item") {
         await getSlackClient().views.open({
           trigger_id: payload.trigger_id,
           view: buildAddDiscussionItemModal() as any,
