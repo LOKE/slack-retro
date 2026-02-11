@@ -208,6 +208,16 @@ export function buildHomeView(
           type: "button",
           text: {
             type: "plain_text",
+            text: "🌐 Open in Browser",
+            emoji: true,
+          },
+          action_id: "open_in_browser",
+          style: "primary",
+        },
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
             text: "📝 Edit Instructions",
             emoji: true,
           },
@@ -811,5 +821,45 @@ export function buildViewInstructionsModal(instructions?: string) {
       text: "Close",
     },
     blocks,
+  };
+}
+
+export function buildOpenInBrowserModal(authUrl: string) {
+  return {
+    type: "modal" as const,
+    callback_id: "open_in_browser_modal",
+    title: {
+      type: "plain_text",
+      text: "Open in Browser",
+    },
+    close: {
+      type: "plain_text",
+      text: "Close",
+    },
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: "🌐 *Open Retro in Browser*\n\nClick the button below to open the retro board in your browser. This link will expire in 5 minutes.",
+        },
+      },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: {
+              type: "plain_text",
+              text: "Open Browser View",
+              emoji: true,
+            },
+            url: authUrl,
+            action_id: "open_browser_link",
+            style: "primary",
+          },
+        ],
+      },
+    ],
   };
 }
