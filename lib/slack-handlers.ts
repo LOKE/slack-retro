@@ -132,10 +132,10 @@ export async function processSlackEvent(payload: any) {
         // Generate signed token
         const token = generateAuthToken(userId, userName, teamId);
 
-        // Build URL - use VERCEL_URL in production, localhost in dev
-        const baseUrl = process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}`
-          : process.env.BASE_URL || "http://localhost:3000";
+        // Build URL - use BASE_URL if set, otherwise VERCEL_URL, then localhost
+        const baseUrl = process.env.BASE_URL
+          || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+          || "http://localhost:3000";
         const authUrl = `${baseUrl}/api/auth/browser?token=${token}`;
 
         // Open modal with the link
