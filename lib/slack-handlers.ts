@@ -27,6 +27,7 @@ import {
   generateRetroSummary,
   buildEditInstructionsModal,
   buildViewInstructionsModal,
+  buildOpenInBrowserModal,
 } from "./slack-ui";
 import { generateAuthToken } from "./auth";
 
@@ -137,36 +138,10 @@ export async function processSlackEvent(payload: any) {
           : process.env.BASE_URL || "http://localhost:3000";
         const authUrl = `${baseUrl}/api/auth/browser?token=${token}`;
 
-        // Send ephemeral message with the link
-        await getSlackClient().chat.postEphemeral({
-          channel: userId,
-          user: userId,
-          text: `Click here to open the retro in your browser: ${authUrl}`,
-          blocks: [
-            {
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `🌐 *Open Retro in Browser*\n\nClick the button below to open the retro board in your browser. This link will expire in 5 minutes.`,
-              },
-            },
-            {
-              type: "actions",
-              elements: [
-                {
-                  type: "button",
-                  text: {
-                    type: "plain_text",
-                    text: "Open Browser View",
-                    emoji: true,
-                  },
-                  url: authUrl,
-                  action_id: "open_browser_link",
-                  style: "primary",
-                },
-              ],
-            },
-          ],
+        // Open modal with the link
+        await getSlackClient().views.open({
+          trigger_id: payload.trigger_id,
+          view: buildOpenInBrowserModal(authUrl) as any,
         });
       }
 
